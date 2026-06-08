@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  FREE
+  PRO
+  PREMIUM
+}
+
+enum ApplicationStatus {
+  SAVED
+  APPLIED
+  INTERVIEW
+  REJECTED
+}
+
+model User {
+  id                   String           @id
+  email                String           @unique
+  plan                 Plan             @default(FREE)
+  stripeCustomerId     String?          @unique
+  stripeSubscriptionId String?
+  stripePriceId        String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  resumes              Resume[]
+  applications         JobApplication[]
+  usage                DailyUsage[]
+
+  @@map("users")
+}
+
+model Resume {
+  id        String   @id @default(cuid())
+  userId    String
+  content   String
+  skills    String
+  score     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("resumes")
+}
+
+model JobApplication {
+  id              String            @id @default(cuid())
+  userId          String
+  jobTitle        String
+  company         String
+  description     String
+  jobUrl          String?
+  matchScore      Int
+  strengths       String?
+  missingSkills   String?
+  interviewChance String?
+  coverLetter     String?
+  emailText       String?
+  optimizedResume String?
+  status          ApplicationStatus @default(SAVED)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@map("job_applications")
+}
+
+model DailyUsage {
+  id               String   @id @default(cuid())
+  userId           String
+  date             DateTime
+  matchesGenerated Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("daily_usage")
+}
